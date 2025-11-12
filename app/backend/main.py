@@ -20,7 +20,12 @@ Base.metadata.create_all(bind=engine)
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Frontend URLs
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173",
+        "http://localhost:15173", 
+        "http://127.0.0.1:15173"
+    ],  # Frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

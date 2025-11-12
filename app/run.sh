@@ -70,6 +70,9 @@ check_directory() {
 check_prerequisites() {
     print_status "Checking prerequisites..."
     
+    # Add Poetry to PATH if installed via pip
+    export PATH="$HOME/Library/Python/3.12/bin:$HOME/.local/bin:$PATH"
+    
     local missing_deps=()
     
     # Check for Node.js
@@ -173,7 +176,11 @@ setup_database() {
 install_backend() {
     print_status "Installing backend dependencies..."
     
-    cd backend
+    # Ensure Poetry is in PATH
+    export PATH="$HOME/Library/Python/3.12/bin:$HOME/.local/bin:$PATH"
+    
+    # Poetry project is in the root directory, not in backend
+    cd ..
     
     # Check if dependencies are actually installed and working
     if poetry run python -c "import uvicorn; import fastapi" >/dev/null 2>&1; then
@@ -185,12 +192,12 @@ install_backend() {
             print_success "Backend dependencies installed!"
         else
             print_error "Failed to install backend dependencies properly"
-            print_error "Try running: cd backend && poetry install --sync"
+            print_error "Try running: poetry install --sync"
             exit 1
         fi
     fi
     
-    cd ..
+    cd app
 }
 
 # Function to install frontend dependencies
@@ -248,6 +255,8 @@ start_services() {
     
     # Start backend
     print_status "Starting backend server..."
+    # Ensure Poetry is in PATH
+    export PATH="$HOME/Library/Python/3.12/bin:$HOME/.local/bin:$PATH"
     # Run from the app directory (parent of backend) to ensure proper Python imports
     cd ..
     poetry run uvicorn app.backend.main:app --reload --host 127.0.0.1 --port 8000 > "$LOG_DIR/backend.log" 2>&1 &

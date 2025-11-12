@@ -8,7 +8,7 @@ services:
       - METAL_DEVICE=on
       - METAL_DEVICE_INDEX=0
     volumes:
-      - ollama_data:/root/.ollama
+      - ollama_data:/Users/dalli/.ollama
     ports:
       - "11434:11434"
     restart: unless-stopped
@@ -98,5 +98,56 @@ services:
     tty: true
     stdin_open: true
 
+  # Web Application Services
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ai-hedge-fund
+    container_name: ai-hedge-fund-backend
+    depends_on:
+      - ollama
+    volumes:
+      - ../.env:/app/.env
+      - hedge_fund_db:/app
+    command: poetry run uvicorn app.backend.main:app --reload --host 0.0.0.0 --port 8000
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - PYTHONPATH=/app
+    ports:
+      - "18000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    image: ai-hedge-fund-frontend
+    container_name: ai-hedge-fund-frontend
+    depends_on:
+      - backend
+    volumes:
+      - ../app/frontend:/app
+      - /app/node_modules
+    ports:
+      - "15173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:18000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:5173 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 volumes:
-  ollama_data: 
+  ollama_data:
+  hedge_fund_db: 
