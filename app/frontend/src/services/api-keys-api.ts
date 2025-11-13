@@ -40,7 +40,7 @@ export interface ApiKeyBulkUpdateRequest {
 }
 
 class ApiKeysService {
-  private baseUrl = `${API_BASE_URL}/api-keys`;
+  private baseUrl = `${API_BASE_URL}/api-keys/`;
 
   async getAllApiKeys(includeInactive = false): Promise<ApiKeySummary[]> {
     const params = new URLSearchParams();

@@ -127,10 +127,14 @@ export function ApiKeysSettings() {
           key_value: value.trim(),
           is_active: true
         });
+        // Reload API keys after successful save
+        await loadApiKeys();
       } else {
         // If value is empty, delete the key
         try {
           await apiKeysService.deleteApiKey(key);
+          // Reload API keys after successful deletion
+          await loadApiKeys();
         } catch (err) {
           // Key might not exist, which is fine
           console.log(`Key ${key} not found for deletion, which is expected`);
@@ -139,6 +143,8 @@ export function ApiKeysSettings() {
     } catch (err) {
       console.error(`Failed to save API key ${key}:`, err);
       setError(`Failed to save ${key}. Please try again.`);
+      // Reload API keys even on error to sync state
+      await loadApiKeys();
     }
   };
 

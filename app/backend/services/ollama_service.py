@@ -23,9 +23,17 @@ class OllamaService:
         self._download_progress = {}
         self._download_processes = {}
         
-        # Initialize async client
-        self._async_client = ollama.AsyncClient()
-        self._sync_client = ollama.Client()
+        # Get Ollama base URL from environment variable
+        ollama_base_url = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+        
+        # Parse URL to extract hostname and port
+        from urllib.parse import urlparse
+        parsed = urlparse(ollama_base_url)
+        host_with_port = f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
+        
+        # Initialize async client with the host:port format
+        self._async_client = ollama.AsyncClient(host=host_with_port)
+        self._sync_client = ollama.Client(host=host_with_port)
     
     # =============================================================================
     # PUBLIC API METHODS
@@ -34,9 +42,14 @@ class OllamaService:
     async def check_ollama_status(self) -> Dict[str, any]:
         """Check Ollama installation and server status."""
         try:
-            is_installed = await self._check_installation()
             is_running = await self._check_server_running()
             models, server_url = await self._get_server_info(is_running)
+            
+            # In Docker environment, if server is reachable, consider it "installed"
+            if is_running:
+                is_installed = True
+            else:
+                is_installed = await self._check_installation()
             
             status = {
                 "installed": is_installed,
@@ -47,7 +60,7 @@ class OllamaService:
                 "error": None
             }
             
-            logger.debug(f"Ollama status: installed={is_installed}, running={is_running}, models={len(models)}")
+            logger.info(f"Ollama status: installed={is_installed}, running={is_running}, models={len(models)}")
             return status
             
         except Exception as e:
@@ -208,10 +221,10 @@ class OllamaService:
         """Check if the Ollama server is running using the ollama client."""
         try:
             await self._async_client.list()
-            logger.debug("Ollama server confirmed running via client")
+            logger.info("Ollama server confirmed running via client")
             return True
         except Exception as e:
-            logger.debug(f"Ollama server not reachable: {e}")
+            logger.warning(f"Ollama server not reachable: {e}")
             return False
     
     async def _get_server_info(self, is_running: bool) -> tuple[List[str], str]:
@@ -221,12 +234,29 @@ class OllamaService:
         
         try:
             response = await self._async_client.list()
-            models = [model.model for model in response.models]
+            # Handle different response structures from Ollama client
+            models = []
+            if hasattr(response, 'models') and response.models:
+                for model in response.models:
+                    # Try different attribute names for model name
+                    model_name = None
+                    if hasattr(model, 'model'):
+                        model_name = model.model
+                    elif hasattr(model, 'name'):
+                        model_name = model.name
+                    elif isinstance(model, str):
+                        model_name = model
+                    elif isinstance(model, dict):
+                        model_name = model.get('model') or model.get('name', '')
+                    
+                    if model_name:
+                        models.append(model_name)
+            
             server_url = getattr(self._async_client, 'host', 'http://localhost:11434')
-            logger.debug(f"Found {len(models)} locally available models")
+            logger.info(f"Found {len(models)} locally available models: {models}")
             return models, server_url
         except Exception as e:
-            logger.debug(f"Failed to get server info: {e}")
+            logger.error(f"Failed to get server info: {e}", exc_info=True)
             return [], ""
     
     async def _execute_server_start(self) -> bool:

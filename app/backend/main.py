@@ -18,15 +18,11 @@ app = FastAPI(title="AI Hedge Fund API", description="Backend API for AI Hedge F
 Base.metadata.create_all(bind=engine)
 
 # Configure CORS
+# Allow all origins in development (Docker networking causes origin to be internal IP)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173",
-        "http://localhost:15173", 
-        "http://127.0.0.1:15173"
-    ],  # Frontend URLs
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=False,  # Cannot use credentials with wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )

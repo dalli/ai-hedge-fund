@@ -10,7 +10,7 @@ services:
       - METAL_DEVICE=on
       - METAL_DEVICE_INDEX=0
     volumes:
-      - ollama_data:/Users/dalli/.ollama
+      - /Users/dalli/.ollama:/root/.ollama
     ports:
       - "11434:11434"
     restart: unless-stopped
@@ -92,6 +92,8 @@ services:
 
   # Web Application Services
   backend:
+    profiles:
+      - embedded-ollama
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -118,6 +120,8 @@ services:
       start_period: 40s
 
   frontend:
+    profiles:
+      - embedded-ollama
     build:
       context: ..
       dockerfile: docker/Dockerfile.frontend
